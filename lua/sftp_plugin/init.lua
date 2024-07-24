@@ -1,6 +1,9 @@
 local M = {}
 
 M.setup = function()
+  -- Debug message to verify setup execution
+  print("sftp_plugin setup executed")
+
   -- Key mappings
   vim.api.nvim_set_keymap('n', '<leader>sp', ':lua require("sftp_plugin.sftp").choose_profile()<CR>', { noremap = true, silent = true })
   vim.api.nvim_set_keymap('n', '<leader>su', ':lua require("sftp_plugin.sftp").upload_file()<CR>', { noremap = true, silent = true })
