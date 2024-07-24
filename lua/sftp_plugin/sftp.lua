@@ -1,30 +1,38 @@
 local M = {}
 local profile = nil
 
+-- Load paths and profiles
+local config = require('sftp_plugin.profiles')
+
 -- Function to choose a profile
 function M.choose_profile()
   local cwd = vim.fn.getcwd()
-  local repo = cwd:match("([^/]+)$")
   
-  if repo == "repo1" then
-    profiles = {"dev1", "dev2"}
-  elseif repo == "repo2" then
-    profiles = {"dev3", "dev4"}
-  else
-    print("Unknown repository: " .. repo)
-    return
-  end
-
-  vim.ui.select(profiles, {prompt = 'Choose an SFTP profile:'}, function(choice)
-    profile = choice
-    if profile then
-      print("Selected profile: " .. profile)
-      vim.g.sftp_profile = profile
-      vim.g.sftp_repo = repo
-    else
-      print("No profile selected")
+  -- Find profiles based on the current directory
+  local available_profiles = {}
+  for name, info in pairs(config.profiles) do
+    if cwd == info.localPath then
+      table.insert(available_profiles, name)
     end
-  end)
+  end
+  
+  -- Debugging information
+  print("Current working directory: " .. cwd)
+
+  if #available_profiles > 0 then
+    vim.ui.select(available_profiles, {prompt = 'Choose an SFTP profile:'}, function(choice)
+      profile = choice
+      if profile then
+        print("Selected profile: " .. profile)
+        vim.g.sftp_profile = profile
+        vim.g.sftp_repo = cwd
+      else
+        print("No profile selected")
+      end
+    end)
+  else
+    print("Unknown directory or no profiles available for the current directory: " .. cwd)
+  end
 end
 
 -- Function to upload the current file
@@ -34,8 +42,7 @@ function M.upload_file()
   end
 
   if not vim.g.sftp_repo then
-    local cwd = vim.fn.getcwd()
-    vim.g.sftp_repo = cwd:match("([^/]+)$")
+    vim.g.sftp_repo = vim.fn.getcwd()
   end
 
   if not profile then
@@ -45,9 +52,13 @@ function M.upload_file()
 
   local file = vim.fn.expand('%:p')
   if file and file ~= "" then
-    local cmd = string.format('~/.config/upload.sh %s %s %s', vim.g.sftp_repo, profile, file)
+    local profile_info = config.profiles[profile]
+    local cmd = string.format(
+      'sshpass -p %s sftp -oPort=%d %s@%s:%s <<< $\'put %s\'',
+      profile_info.password, profile_info.port, profile_info.username, profile_info.host, profile_info.remotePath, file
+    )
     os.execute(cmd)
-    print("Uploaded " .. file .. " using profile " .. profile .. " for repo " .. vim.g.sftp_repo)
+    print("Uploaded " .. file .. " using profile " .. profile)
   else
     print("No file to upload")
   end
