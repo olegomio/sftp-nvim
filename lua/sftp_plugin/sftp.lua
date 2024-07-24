@@ -1,6 +1,8 @@
 local M = {}
 local profile = nil
 
+print("sftp.lua loaded")
+
 -- Load paths and profiles
 local config = require('sftp_plugin.profiles')
 
